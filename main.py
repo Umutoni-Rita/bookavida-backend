@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 import requests
 from model import recommend_books
 from dotenv import load_dotenv
@@ -6,6 +7,14 @@ import os
 
 load_dotenv()
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], 
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all methods (GET, POST, etc.)
+    allow_headers=["*"],  # Allow all headers
+)
 
 @app.get("/recommend")
 def get_recommendations(book1: str, book2: str, rating1: int, rating2: int):
@@ -28,8 +37,11 @@ def get_recommendations(book1: str, book2: str, rating1: int, rating2: int):
         url = f"https://www.googleapis.com/books/v1/volumes?q={title}&key={api_key}"
         try:
             response = requests.get(url).json()
-            summary = response['items'][0]['volumeInfo'].get('description', 'No summary available')
-            results.append({"title": title, "summary": summary})
+            item = response['items'][0]['volumeInfo']
+            summary = item.get('description', 'No summary available')
+            cover = item.get('imageLinks', {}).get('thumbnail', '')
+            authors = item.get('authors', ['Author information unavailable'])
+            results.append({"title": title, "summary": summary, "cover": cover, "authors": authors}, )
         except Exception as e:
             results.append({"title": title, "summary": f"Error fetching summary: {str(e)}"})
             
